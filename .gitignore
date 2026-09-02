@@ -1,0 +1,10 @@
+backend/admin/dist/
+driver/schoolrunforfreelancers-firebase-adminsdk-fbsvc-8a66c2bbe3.json
+driver/google-services.json
+guardian/google-services.json
+backend/.env
+node_modules/
+**/node_modules/
+**/android/build/
+**/android/.gradle/
+**/ios/Pods/

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "685677242940",
+    "project_id": "schoolrunforfreelancers",
+    "storage_bucket": "schoolrunforfreelancers.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:685677242940:android:6788ed97200c54cdcfb139",
+        "android_client_info": {
+          "package_name": "com.senorsparks.schooldropguardians"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBOOka3r9O1CBQZcI1N9q2-eedLjBxdEmU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

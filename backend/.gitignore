@@ -1,0 +1,46 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist-ssr
+*.local
+uploads/*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# Environment variables / secrets
+.env
+**/.env
+*.key
+
+# Firebase service account keys
+*firebase-adminsdk*.json
+driver/schoolrunforfreelancers-firebase-adminsdk-fbsvc-8a66c2bbe3.json
+
+# Firebase client config (optional but recommended)
+driver/google-services.json
+guardian/google-services.json
+
+# Build output
+backend/admin/dist/
+
+# Standard node stuff, in case not already present
+node_modules/
+backend/admin/dist/
+driver/schoolrunforfreelancers-firebase-adminsdk-fbsvc-8a66c2bbe3.json
+driver/google-services.json
+guardian/google-services.json

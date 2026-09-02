@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "SchoolRun",
+    "slug": "schooldropguardians",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/logo.png",
+        "backgroundImage": "./assets/logo.png",
+        "monochromeImage": "./assets/logo.png"
+      },
+      "package": "com.senorsparks.schooldropguardians",
+      "googleServicesFile": "./google-services.json"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#232323",
+          "image": "./assets/logo.png",
+          "dark": {
+            "image": "./assets/logo.png",
+            "backgroundColor": "#000000"
+          },
+          "imageWidth": 200
+        }
+      ],
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsImpl": "mapbox"
+        }
+      ],
+      "expo-status-bar",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/logo.png",
+          "color": "#e83030",
+          "sounds": ["./assets/sounds/notif.wav"]
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a9a93e8e-8af6-4fb1-8b49-32e0a530d0d1"
+      }
+    },
+    "owner": "takutrey"
+  }
+}
