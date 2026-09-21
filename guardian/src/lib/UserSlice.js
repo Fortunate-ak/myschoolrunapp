@@ -10,6 +10,7 @@ const initialState = {
   isLoading: false,
   error: null,
   success: null,
+  skippedFindDriver: false,
 };
 
 export const setGuardianProfile = createAsyncThunk(
@@ -151,6 +152,27 @@ export const addStudentToGuardian = createAsyncThunk(
   },
 );
 
+// Calls userController.subscribeGuardian (POST /users/subscribe). Persists a
+// real subscription server-side, including which (dummy) payment method was
+// used and its generated reference, and returns the updated guardian record.
+export const subscribeGuardian = createAsyncThunk(
+  "users/subscribeGuardian",
+  async ({ plan, paymentMethod, paymentReference }, thunkAPI) => {
+    try {
+      const response = await api.post("/users/subscribe", {
+        plan,
+        paymentMethod,
+        paymentReference,
+      });
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to subscribe",
+      );
+    }
+  },
+);
+
 export const guardianSlice = createSlice({
   name: "users",
   initialState,
@@ -170,6 +192,15 @@ export const guardianSlice = createSlice({
       if (state.guardianProfile) {
         state.guardianProfile[field] = value;
       }
+    },
+    // Guardian chose to defer picking a driver on FindDriverScreen and enter
+    // the main app instead. This only flips a boolean in memory (not
+    // persisted), so it resets to false on every fresh login/cold start —
+    // the guardian is asked again next time rather than the skip being
+    // remembered forever. App.js's navigator gate reads this flag to decide
+    // whether to route into "Main" instead of "FindDriver".
+    skipFindDriver: (state) => {
+      state.skippedFindDriver = true;
     },
   },
   extraReducers: (builder) => {
@@ -253,6 +284,23 @@ export const guardianSlice = createSlice({
         }
       })
       .addCase(addStudentToGuardian.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      });
+
+    // Replaces guardianProfile with the real, server-persisted record once
+    // subscription succeeds (isSubscribed/subscriptionPlan/subscriptionExpiresAt
+    // all come back populated from the backend).
+    builder
+      .addCase(subscribeGuardian.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(subscribeGuardian.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.guardianProfile = action.payload;
+      })
+      .addCase(subscribeGuardian.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       });
@@ -346,19 +394,6 @@ export const guardianSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload;
       });
-      builder
-  .addCase(subscribeGuardian.pending, (state) => {
-    state.isLoading = true;
-    state.error = null;
-  })
-  .addCase(subscribeGuardian.fulfilled, (state, action) => {
-    state.isLoading = false;
-    state.guardianProfile = action.payload;
-  })
-  .addCase(subscribeGuardian.rejected, (state, action) => {
-    state.isLoading = false;
-    state.error = action.payload;
-  });
   },
 });
 
@@ -368,18 +403,6 @@ export const {
   clearGuardianSuccess,
   clearGuardianprofile,
   updateLocalGuardianProfile,
+  skipFindDriver,
 } = guardianSlice.actions;
 export default guardianSlice.reducer;
-export const subscribeGuardian = createAsyncThunk(
-  "users/subscribeGuardian",
-  async (plan, thunkAPI) => {
-    try {
-      const response = await api.post("/users/subscribe", { plan });
-      return response.data;
-    } catch (error) {
-      return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to subscribe",
-      );
-    }
-  },
-);

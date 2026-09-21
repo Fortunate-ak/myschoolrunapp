@@ -36,13 +36,24 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DATE,
         allowNull: true,
       },
-      // NEW — set once, at guardian-profile creation, never updated after.
-      // Used to compute the 7-day free trial window server-side so it
-      // can't be reset by reinstalling the app.
+      // NOT NULL at the DB level with no default — so it must always be
+      // supplied on create. defaultValue: DataTypes.NOW makes Sequelize
+      // stamp the current timestamp automatically on every guardian
+      // creation, so callers (setGuardianProfile, etc.) don't need to set
+      // it explicitly. Adjust if trials should start at a different point
+      // (e.g. only once a plan is chosen) rather than at profile creation.
       trialStartDate: {
         type: DataTypes.DATE,
         allowNull: false,
         defaultValue: DataTypes.NOW,
+      },
+      paymentMethod: {
+        type: DataTypes.ENUM("card", "ecocash", "onemoney", "bank_transfer", "cash_on_pickup"),
+        allowNull: true,
+      },
+      paymentReference: {
+        type: DataTypes.STRING,
+        allowNull: true,
       },
     },
     {
@@ -51,51 +62,20 @@ module.exports = (sequelize, DataTypes) => {
     },
   );
 
-  // Returns whether the 7-day trial window is still open right now.
-  // Does NOT consider isSubscribed — callers should check
-  // (trialActive || isSubscribed-and-not-expired) together, or just use
-  // canUseApp() below.
-  Guardian.prototype.isTrialActive = function () {
-    const TRIAL_DAYS = 7;
-    const trialEnd = new Date(this.trialStartDate);
-    trialEnd.setDate(trialEnd.getDate() + TRIAL_DAYS);
-    return new Date() < trialEnd;
-  };
-
-  Guardian.prototype.getTrialDaysLeft = function () {
-    if (!this.isTrialActive()) return 0;
-    const TRIAL_DAYS = 7;
-    const trialEnd = new Date(this.trialStartDate);
-    trialEnd.setDate(trialEnd.getDate() + TRIAL_DAYS);
-    const msLeft = trialEnd - new Date();
-    return Math.ceil(msLeft / (1000 * 60 * 60 * 24));
-  };
-
-  // Whether the guardian can currently use gated features — either the
-  // trial is still running, or they have an active, non-expired paid plan.
-  // This is the single source of truth used both by getProfile (to report
-  // status to the client) and by createRequest (to actually enforce it).
-  Guardian.prototype.canUseApp = function () {
-    const subscriptionActive =
-      this.isSubscribed &&
-      this.subscriptionExpiresAt &&
-      new Date() < new Date(this.subscriptionExpiresAt);
-    return this.isTrialActive() || subscriptionActive;
-  };
-
   Guardian.associate = (models) => {
     Guardian.belongsTo(models.users, { foreignKey: "userId", as: "user" });
 
+    // Add unique alias for hasMany association
     Guardian.hasMany(models.guardianstudents, {
       foreignKey: "guardianId",
-      as: "guardianStudents",
+      as: "guardianStudents", // Unique alias
     });
 
     Guardian.belongsToMany(models.students, {
       through: models.guardianstudents,
       foreignKey: "guardianId",
       otherKey: "studentId",
-      as: "students",
+      as: "students", // Unique alias
     });
   };
 

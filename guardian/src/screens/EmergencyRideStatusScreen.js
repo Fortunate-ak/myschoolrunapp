@@ -27,7 +27,7 @@ import { useTheme } from "../contexts/ThemeContext";
 import { useDispatch, useSelector } from "react-redux";
 import Toast from "react-native-toast-message";
 import { cancelEmergencyRide } from "../lib/EmergencyRideSlice";
-import { useGuardianSocket } from "../hooks/useGuardianSocket";
+import { getSocket } from "../utils/socket"; // raw socket getter — do NOT call useGuardianSocket() here, it's mounted once at app root
 import { getInitials } from "../utils/helpers";
 
 export default function EmergencyRideStatusScreen({ navigation, route }) {
@@ -40,7 +40,6 @@ export default function EmergencyRideStatusScreen({ navigation, route }) {
     (state) => state.emergencyRides
   );
   const { userId } = useSelector((state) => state.users);
-  const socket = useGuardianSocket();
 
   const [status, setStatus] = useState("WAITING"); // WAITING, ACCEPTED, REJECTED, CANCELLED
   const [isCancelling, setIsCancelling] = useState(false);
@@ -51,6 +50,7 @@ export default function EmergencyRideStatusScreen({ navigation, route }) {
 
   // Socket.io listener for driver acceptance
   useEffect(() => {
+    const socket = getSocket(); // the singleton connected/joined once at app root by useGuardianSocket
     if (!socket) return;
 
     const handleDriverAccepted = (data) => {
@@ -108,7 +108,7 @@ export default function EmergencyRideStatusScreen({ navigation, route }) {
       socket.off("emergency-ride:driver-rejected", handleDriverRejected);
       socket.off("emergency-ride:ride-cancelled", handleRideCancelled);
     };
-  }, [socket, rideId, navigation]);
+  }, [rideId, navigation]);
 
   // Countdown timer for driver response
   useEffect(() => {
