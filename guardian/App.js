@@ -50,9 +50,12 @@ const Stack = createNativeStackNavigator();
 function AppNavigator() {
   const dispatch = useDispatch();
   const { isAuthenticated, user } = useSelector((state) => state.auth);
-  const { guardianProfile, students, isLoading: guardianLoading } = useSelector(
-    (state) => state.users,
-  );
+  const {
+    guardianProfile,
+    students,
+    skippedFindDriver, // NEW — set by the Skip button on FindDriverScreen
+    isLoading: guardianLoading,
+  } = useSelector((state) => state.users);
 
   // ── Get theme for StatusBar ──────────────────────────────────────────────
   const { isDark } = useTheme();
@@ -145,10 +148,14 @@ function AppNavigator() {
       ) : !hasProfile ? (
         // ── Step 1: Set Profile ──────────────────────────────────────────
         <Stack.Screen name="GuardianSetProfile" component={SetProfileScreen} />
-      ) : !hasStudents ? (
-        // ── Step 2: Find Driver ────────────────────────────────────────────
-        // (Subscription is no longer forced here — guardians can browse
-        // and pick a driver before ever seeing the subscription screen.)
+      ) : !hasStudents && !skippedFindDriver ? (
+        // ── Step 2: Find Driver (skippable) ─────────────────────────────
+        // Guardian can tap "Skip" on FindDriverScreen, which dispatches
+        // skipFindDriver() and flips skippedFindDriver to true, dropping
+        // them straight into Main. skippedFindDriver lives in Redux state
+        // only (not persisted to storage), so it resets to false on every
+        // fresh login / cold start — guardians are asked again next time,
+        // rather than the skip being remembered forever.
         <Stack.Screen name="GuardianFindDriver" component={FindDriverScreen} />
       ) : (
         // ── Main App ─────────────────────────────────────────────────────

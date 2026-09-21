@@ -16,6 +16,7 @@ import { useDispatch, useSelector } from "react-redux";
 import Toast from "react-native-toast-message";
 import { getAllVehicles } from "../lib/VehicleRoutesSlice";
 import { sendRequest } from "../lib/GuardianRequestsSlice";
+import { skipFindDriver } from "../lib/UserSlice";
 import api from "../utils/axiosInstance";
 
 const MEDIA_BASE_URL = (api.defaults.baseURL || "").replace(/\/api\/?$/, "");
@@ -82,8 +83,22 @@ export default function FindDriverScreen({ navigation }) {
     setSelectedStop(null);
   };
 
-  const handleSendRequest = async () => {
-    if (!selectedStudent) {
+  // Guardian can defer picking a driver and enter the main app instead.
+  // Dispatching skipFindDriver() flips users.skippedFindDriver to true in
+  // Redux state, which App.js's navigator gate reacts to (see
+  // `!hasStudents && !skippedFindDriver`) — no manual navigation call is
+  // needed since "Main" isn't even registered in the stack while this
+  // screen is showing; flipping the flag makes the navigator swap branches
+  // on its own. Because the flag lives only in Redux state (not persisted),
+  // it resets to false on every fresh login/cold start, so the guardian is
+  // asked again next time rather than the skip being remembered forever.
+  const handleSkip = () => {
+    dispatch(skipFindDriver());
+  };
+const handleSendRequest = async () => {
+  if (isSubmitting || isSending) return;
+
+  if (!selectedStudent) {
       Toast.show({
         type: "error",
         text1: "No Student Selected",
@@ -411,7 +426,9 @@ export default function FindDriverScreen({ navigation }) {
           <Text style={styles.headerTitle}>Find Driver</Text>
           <Text style={styles.headerSub}>Step 2 of 3</Text>
         </View>
-        <View style={{ width: 36 }} />
+        <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
+          <Text style={styles.skipBtnText}>Skip</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.searchContainer}>
@@ -483,14 +500,6 @@ export default function FindDriverScreen({ navigation }) {
               styles.disabledBtn,
           ]}
           onPress={handleSendRequest}
-          disabled={
-            !selectedStudent ||
-            !selectedVehicle ||
-            !selectedRoute ||
-            !selectedStop ||
-            isSubmitting ||
-            isSending
-          }
           activeOpacity={0.85}
         >
           <LinearGradient
@@ -555,6 +564,17 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   headerSub: { fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2 },
+  skipBtn: {
+    minWidth: 36,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignItems: "flex-end",
+  },
+  skipBtnText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.5)",
+  },
 
   searchContainer: {
     flexDirection: "row",

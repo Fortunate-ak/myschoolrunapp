@@ -180,6 +180,7 @@ export const driverSlice = createSlice({
       .addCase(setDriverProfile.fulfilled, (state, action) => {
         state.isLoading = false;
         state.driverProfile = action.payload;
+        console.log("driver profile response:", action.payload);
       })
       .addCase(setDriverProfile.rejected, (state, action) => {
         state.isLoading = false;

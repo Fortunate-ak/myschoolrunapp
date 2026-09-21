@@ -1352,9 +1352,17 @@ const verifyEmailOTP = async (req, res) => {
 
     return res.status(200).json({
       message: "Email verified successfully!",
-      user,
+      user: {
+        id: user.id,
+        email: user.email,
+        fullname: user.fullname,
+        role: user.role?.name,
+        isVerified: user.isVerified,
+        verifiedAt: user.verifiedAt,
+      },
     });
   } catch (error) {
+    console.error("verifyEmailOTP error:", error);
     return res.status(500).json({
       message: "Server error: Please try again later",
     });
@@ -1516,7 +1524,12 @@ return res.status(200).json({
     isSubscribed: roleDetails?.isSubscribed ?? null, // null = n/a (e.g. drivers)
   },
 });
-  } catch (error) {}
+  } catch (error) {
+    console.error("getOTPStatus error:", error);
+    return res.status(500).json({
+      message: "Server error: Please try again later",
+    });
+  }
 };
 module.exports = {
   login,

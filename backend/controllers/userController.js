@@ -12,6 +12,7 @@ const Guardian = db.guardians;
 const VehicleRoute = db.vehicleroutes;
 const Vehicle = db.vehicles;
 const { hashPassword } = require("../utils/authHelpers");
+const { isGuardianSubscriptionActive } = require("../utils/subscriptionHelpers");
 const requestIp = require("request-ip");
 const {
   generateAndHashPassword,
@@ -1247,11 +1248,6 @@ const updateDriver = async (req, res) => {
   }
 };
 
-// ── EDITED ───────────────────────────────────────────────────────────────
-// getProfile now returns trial + subscription status alongside roleDetails
-// for guardians, so the frontend (App.js, SubscriptionScreen,
-// FindDriverScreen's client-side pre-check) has everything it needs from a
-// single call to GET /users/my-profile.
 const getProfile = async (req, res) => {
   try {
     const { id } = req.user;
@@ -1276,7 +1272,12 @@ const getProfile = async (req, res) => {
 
     switch (roleName) {
       case "guardian": {
-        const guardian = await Guardian.findOne({
+        // Fetch the raw Sequelize record first so we can both include
+        // associations AND compute the canUseApp flag from the instance
+        // (isGuardianSubscriptionActive needs isSubscribed/
+        // subscriptionExpiresAt, which toJSON() alone won't give us a
+        // place to attach a derived field to).
+        const guardianRecord = await Guardian.findOne({
           where: { userId: id },
           include: [
             {
@@ -1290,17 +1291,14 @@ const getProfile = async (req, res) => {
           ],
         });
 
-        if (guardian) {
-          // guardian is a Sequelize instance here, so the instance methods
-          // added on the model (isTrialActive/getTrialDaysLeft/canUseApp)
-          // are available. toJSON() gives us a plain object we can safely
-          // attach extra computed fields to before sending it out.
-          roleDetails = {
-            ...guardian.toJSON(),
-            trialActive: guardian.isTrialActive(),
-            trialDaysLeft: guardian.getTrialDaysLeft(),
-            canUseApp: guardian.canUseApp(),
-          };
+        if (guardianRecord) {
+          // Option 2: canUseApp is purely "is System B's subscription
+          // active" — there is no app-wide trial gate anymore. This is
+          // computed here (not stored) so it's always derived fresh from
+          // isSubscribed + subscriptionExpiresAt rather than risking a
+          // stale stored value.
+          roleDetails = guardianRecord.toJSON();
+          roleDetails.canUseApp = isGuardianSubscriptionActive(guardianRecord);
         } else {
           roleDetails = null;
         }
@@ -1411,17 +1409,27 @@ const createUser = async (req, res) => {
   }
 };
 
+const VALID_PAYMENT_METHODS = ["card", "ecocash", "onemoney", "bank_transfer", "cash_on_pickup"];
+
 const subscribeGuardian = async (req, res) => {
   const userIp = requestIp.getClientIp(req);
   const userAgent = req.get("User-Agent");
 
   try {
     const guardianId = req.user.id;
-    const { plan } = req.body;
+    const { plan, paymentMethod, paymentReference } = req.body;
 
     const validPlans = ["basic", "family", "premium"];
     if (!plan || !validPlans.includes(plan)) {
       return res.status(400).json({ message: "A valid plan is required" });
+    }
+
+    if (!paymentMethod || !VALID_PAYMENT_METHODS.includes(paymentMethod)) {
+      return res.status(400).json({ message: "A valid payment method is required" });
+    }
+
+    if (!paymentReference || !paymentReference.trim()) {
+      return res.status(400).json({ message: "A payment reference is required" });
     }
 
     const guardian = await Guardian.findOne({ where: { userId: guardianId } });
@@ -1439,6 +1447,8 @@ const subscribeGuardian = async (req, res) => {
     guardian.isSubscribed = true;
     guardian.subscriptionPlan = plan;
     guardian.subscriptionExpiresAt = expiresAt;
+    guardian.paymentMethod = paymentMethod;
+    guardian.paymentReference = paymentReference.trim();
     await guardian.save();
 
     await logAudit({
@@ -1449,13 +1459,21 @@ const subscribeGuardian = async (req, res) => {
       metadata: {
         plan,
         expiresAt,
+        paymentMethod,
+        paymentReference: paymentReference.trim(),
         ip: userIp,
         userAgent: userAgent,
         timestamp: new Date().toISOString(),
       },
     });
 
-    return res.status(200).json(guardian);
+    // Attach the freshly-computed canUseApp so the guardian's Redux state
+    // (subscribeGuardian.fulfilled replaces guardianProfile wholesale with
+    // this response) reflects access immediately, without waiting on a
+    // separate getGuardianProfile() refetch.
+    const guardianJSON = guardian.toJSON();
+    guardianJSON.canUseApp = isGuardianSubscriptionActive(guardian);
+    return res.status(200).json(guardianJSON);
   } catch (error) {
     console.error("subscribeGuardian error:", error);
     return res.status(500).json({ message: "Server error: Failed to subscribe" });

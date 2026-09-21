@@ -8,6 +8,7 @@ const VehicleRoute = db.vehicleroutes;
 const GuardianStudents = db.guardianstudents;
 const { notifyUser } = require("../services/notificationService");
 const { guardianRequestMessages } = require("../services/notificationMessages");
+const { isGuardianSubscriptionActive } = require("../utils/subscriptionHelpers");
 
 const VALID_REQUEST_TYPES = ["student_onboard_request", "route_stop_request"];
 
@@ -33,6 +34,20 @@ const createRequest = async (req, res) => {
     if (!guardian) {
       await transaction.rollback();
       return res.status(404).json({ message: "Guardian profile not found" });
+    }
+
+    // ── SUBSCRIPTION GATE (System B — authoritative, server-side) ─────────
+    // This is the actual enforcement point for Option 2: booking a driver
+    // requires an active guardian subscription. There is no trial fallback
+    // here — System A was never wired up anywhere in the app and has been
+    // dropped from the plan entirely. Uses the same isGuardianSubscriptionActive
+    // helper as getProfile/subscribeGuardian so all three stay in sync.
+    if (!isGuardianSubscriptionActive(guardian)) {
+      await transaction.rollback();
+      return res.status(403).json({
+        message: "An active subscription is required to request a driver.",
+        code: "SUBSCRIPTION_REQUIRED",
+      });
     }
 
     const {

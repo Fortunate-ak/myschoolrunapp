@@ -115,6 +115,14 @@ export default function OTPVerificationScreen({ navigation, route }) {
         text2: "Your email has been successfully verified",
         visibilityTime: 3000,
       });
+
+      // Verification succeeded but doesn't log the user in — send them to
+      // Login to sign in properly, then App.js routes them onward into
+      // profile setup based on isAuthenticated + hasProfile.
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Login" }],
+      });
     } catch (error) {
       console.error("Verification error:", error);
 

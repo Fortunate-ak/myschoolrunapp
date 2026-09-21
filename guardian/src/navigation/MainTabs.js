@@ -42,6 +42,8 @@ import EmergencyRideHistoryScreen from "../screens/EmergencyRideHistoryScreen";
 import EmergencyRideDetailsScreen from "../screens/EmergencyRideDetailsScreen";
 
 import DrawerContent from "./Drawer";
+import TransactionHistoryScreen from "../screens/TransactionHistoryScreen";
+import AddPaymentMethodScreen from "../screens/AddPaymentMethodScreen";
 
 const Tab = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
@@ -292,6 +294,8 @@ export default function MainTabs() {
       <Drawer.Screen name="StudentsStack" component={StudentsStack} />
       <Drawer.Screen name="EditProfile" component={EditProfileScreen} />
       <Drawer.Screen name="Security" component={SecurityScreen} />
+      <Drawer.Screen name="TransactionHistory" component={TransactionHistoryScreen} />
+      <Drawer.Screen name="AddPaymentMethod" component={AddPaymentMethodScreen} />   
     </Drawer.Navigator>
   );
 }
@@ -321,3 +325,4 @@ const tabStyles = (T) =>
     },
     badgeText: { fontSize: 9, fontWeight: "700", color: "#fff" },
   });
+  
